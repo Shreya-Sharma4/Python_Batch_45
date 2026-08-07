@@ -1,13 +1,11 @@
-import mysql.connector
+from db import conn
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
 console = Console()
 
-
-
-# ADD THEATER
+# ADD THEATER 
 
 def add_theater():
 
@@ -18,10 +16,6 @@ def add_theater():
 
     if theater_name == "" or location == "":
         console.print("[bold red]Theater Name and Location cannot be empty![/bold red]")
-        return
-
-    conn = get_connection()
-    if conn is None:
         return
 
     cursor = conn.cursor()
@@ -41,16 +35,11 @@ def add_theater():
 
     finally:
         cursor.close()
-        conn.close()
 
 
 # VIEW THEATERS
 
 def view_theaters():
-
-    conn = get_connection()
-    if conn is None:
-        return
 
     cursor = conn.cursor()
 
@@ -78,16 +67,11 @@ def view_theaters():
 
     finally:
         cursor.close()
-        conn.close()
 
 
-# SEARCH THEATER 
+# SEARCH THEATER
 
 def search_theater():
-
-    conn = get_connection()
-    if conn is None:
-        return
 
     cursor = conn.cursor()
 
@@ -132,6 +116,7 @@ def search_theater():
             result.add_row("Location", theater[2])
 
             console.print(result)
+
         else:
             console.print("\n[bold red]Theater Not Found![/bold red]\n")
 
@@ -140,16 +125,11 @@ def search_theater():
 
     finally:
         cursor.close()
-        conn.close()
 
 
 # UPDATE THEATER
 
 def update_theater():
-
-    conn = get_connection()
-    if conn is None:
-        return
 
     cursor = conn.cursor()
 
@@ -206,16 +186,11 @@ def update_theater():
 
     finally:
         cursor.close()
-        conn.close()
 
 
-# DELETE THEATER
+# DELETE THEATER 
 
 def delete_theater():
-
-    conn = get_connection()
-    if conn is None:
-        return
 
     cursor = conn.cursor()
 
@@ -263,7 +238,9 @@ def delete_theater():
             """, (theater_name, location))
 
             conn.commit()
+
             console.print("\n[bold green]✓ Theater Deleted Successfully![/bold green]\n")
+
         else:
             console.print("\n[bold cyan]Delete Cancelled.[/bold cyan]\n")
 
@@ -272,4 +249,3 @@ def delete_theater():
 
     finally:
         cursor.close()
-        conn.close()
