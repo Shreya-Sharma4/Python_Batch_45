@@ -6,20 +6,6 @@ from rich.panel import Panel
 console = Console()
 
 
-# DB CONNECTION 
-
-def get_connection():
-    try:
-        return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1234",
-            database="movie_ticket_booking"
-        )
-    except mysql.connector.Error as err:
-        console.print(f"[bold red]Database Connection Error:[/bold red] {err}")
-        return None
-
 
 # ADD THEATER
 
