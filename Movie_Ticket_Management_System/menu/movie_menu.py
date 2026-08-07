@@ -1,8 +1,6 @@
-
-
 from rich.console import Console
 
-from sevices.movie_management import (
+from services.movie_services import (
     add_movie,
     view_movies,
     search_movie,
@@ -54,7 +52,3 @@ def menu():
 
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
-
-
-if __name__ == "__main__":
-    menu()
