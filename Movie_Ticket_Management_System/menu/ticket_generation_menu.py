@@ -78,7 +78,7 @@ def generate_ticket_menu():
 def display_ticket(ticket):
 
     table = Table(
-        title="🎬 MOVIE TICKET",
+        title=" MOVIE TICKET",
         show_header=False,
         border_style="cyan"
     )
@@ -96,18 +96,8 @@ def display_ticket(ticket):
     table.add_row("Seat Price", f"₹{ticket['seat_price']}")
     table.add_row("Total Amount", f"₹{ticket['total_amount']}")
 
-    if ticket["payment_mode"]:
-        table.add_row("Payment Mode", ticket["payment_mode"])
-        table.add_row(
-            "Payment Amount",
-            f"₹{ticket['payment_amount']}"
-        )
-        table.add_row(
-            "Payment Date",
-            str(ticket["payment_date"])
-        )
-    else:
-        table.add_row("Payment Status", "Payment Pending")
+    # payment integration pending
+    pass
 
     console.print()
     console.print(table)

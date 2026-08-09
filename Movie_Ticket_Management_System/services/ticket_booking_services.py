@@ -5,6 +5,7 @@ from rich.table import Table
 
 console = Console()
 
+
 # GET MOVIES
 
 def get_movies():
@@ -21,7 +22,9 @@ def get_movies():
         movies = cursor.fetchall()
 
         if not movies:
-            console.print("[bold red]No movies available.[/bold red]")
+            console.print(
+                "[bold red]No movies available.[/bold red]"
+            )
             return []
 
         table = Table(title="AVAILABLE MOVIES")
@@ -40,141 +43,70 @@ def get_movies():
         return movies
 
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(
+            f"[bold red]Error loading movies: {e}[/bold red]"
+        )
         return []
 
     finally:
         cursor.close()
 
 
-# GET THEATERS
+# -------------------------------------------------
+# GET AVAILABLE SHOWS
+# Theater + Location + Date + Show Time
+# -------------------------------------------------
 
-def get_theaters(movie_id):
+def get_available_shows(movie_id):
 
     cursor = conn.cursor()
 
     try:
         cursor.execute("""
-            SELECT DISTINCT t.theater_id, t.theater_name, t.location
-            FROM theaters t
-            JOIN shows s
-                ON t.theater_id = s.theater_id
+            SELECT
+                s.show_id,
+                t.theater_id,
+                t.theater_name,
+                t.location,
+                s.show_date,
+                s.show_time
+            FROM shows s
+            JOIN theaters t
+                ON s.theater_id = t.theater_id
             WHERE s.movie_id = %s
-            ORDER BY t.theater_name
+            ORDER BY
+                t.theater_name,
+                s.show_date,
+                s.show_time
         """, (movie_id,))
-
-        theaters = cursor.fetchall()
-
-        if not theaters:
-            console.print(
-                "[bold red]No theaters available for this movie.[/bold red]"
-            )
-            return []
-
-        table = Table(title="AVAILABLE THEATERS")
-
-        table.add_column("Theater ID", style="cyan")
-        table.add_column("Theater Name", style="green")
-        table.add_column("Location", style="magenta")
-
-        for theater in theaters:
-            table.add_row(
-                str(theater[0]),
-                theater[1],
-                theater[2]
-            )
-
-        console.print(table)
-
-        return theaters
-
-    except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        return []
-
-    finally:
-        cursor.close()
-
-
-# GET SHOW DATES
-
-def get_show_dates(movie_id, theater_id):
-
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-            SELECT DISTINCT show_date
-            FROM shows
-            WHERE movie_id = %s
-            AND theater_id = %s
-            ORDER BY show_date
-        """, (movie_id, theater_id))
-
-        dates = cursor.fetchall()
-
-        if not dates:
-            console.print(
-                "[bold red]No shows available.[/bold red]"
-            )
-            return []
-
-        table = Table(title="AVAILABLE DATES")
-
-        table.add_column("No.", style="cyan")
-        table.add_column("Show Date", style="green")
-
-        for index, date in enumerate(dates, start=1):
-            table.add_row(
-                str(index),
-                str(date[0])
-            )
-
-        console.print(table)
-
-        return dates
-
-    except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        return []
-
-    finally:
-        cursor.close()
-
-
-# GET SHOW TIMES
-
-def get_show_times(movie_id, theater_id, show_date):
-
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-            SELECT show_id, show_time
-            FROM shows
-            WHERE movie_id = %s
-            AND theater_id = %s
-            AND show_date = %s
-            ORDER BY show_time
-        """, (movie_id, theater_id, show_date))
 
         shows = cursor.fetchall()
 
         if not shows:
             console.print(
-                "[bold red]No shows available for this date.[/bold red]"
+                "[bold red]No shows available for this movie.[/bold red]"
             )
             return []
 
-        table = Table(title="AVAILABLE SHOW TIMES")
+        table = Table(
+            title="AVAILABLE THEATERS, DATES & SHOWS"
+        )
 
         table.add_column("Show ID", style="cyan")
-        table.add_column("Show Time", style="green")
+        table.add_column("Theater ID", style="yellow")
+        table.add_column("Theater", style="green")
+        table.add_column("Location", style="magenta")
+        table.add_column("Date", style="blue")
+        table.add_column("Show Time", style="cyan")
 
         for show in shows:
             table.add_row(
                 str(show[0]),
-                str(show[1])
+                str(show[1]),
+                show[2],
+                show[3],
+                str(show[4]),
+                str(show[5])
             )
 
         console.print(table)
@@ -182,14 +114,18 @@ def get_show_times(movie_id, theater_id, show_date):
         return shows
 
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(
+            f"[bold red]Error loading shows: {e}[/bold red]"
+        )
         return []
 
     finally:
         cursor.close()
 
 
+# -------------------------------------------------
 # DISPLAY SEAT LAYOUT
+# -------------------------------------------------
 
 def display_seat_layout(show_id):
 
@@ -225,10 +161,8 @@ def display_seat_layout(show_id):
         table.add_column("Price", style="magenta")
         table.add_column("Status", style="blue")
 
-
         for seat in seats:
 
-            # Check whether the seat is booked
             cursor.execute("""
                 SELECT booking_id
                 FROM bookings
@@ -256,13 +190,18 @@ def display_seat_layout(show_id):
         return seats
 
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(
+            f"[bold red]Error displaying seats: {e}[/bold red]"
+        )
         return []
 
     finally:
         cursor.close()
 
+
+# -------------------------------------------------
 # CHECK SEAT AVAILABILITY
+# -------------------------------------------------
 
 def check_seat_availability(show_id, seat_id):
 
@@ -280,24 +219,28 @@ def check_seat_availability(show_id, seat_id):
 
         if booking:
             console.print(
-                "[bold red]✗ Seat is already booked.[/bold red]"
+                f"[bold red]✗ Seat {seat_id} is already booked.[/bold red]"
             )
             return False
 
         console.print(
-            "[bold green]✓ Seat is available.[/bold green]"
+            f"[bold green]✓ Seat {seat_id} is available.[/bold green]"
         )
         return True
 
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(
+            f"[bold red]Error checking seat: {e}[/bold red]"
+        )
         return False
 
     finally:
         cursor.close()
 
 
+# -------------------------------------------------
 # GET SEAT PRICE
+# -------------------------------------------------
 
 def get_seat_price(seat_id):
 
@@ -318,14 +261,18 @@ def get_seat_price(seat_id):
         return None
 
     except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(
+            f"[bold red]Error getting seat price: {e}[/bold red]"
+        )
         return None
 
     finally:
         cursor.close()
 
 
-# CREATE BOOKING
+# -------------------------------------------------
+# CREATE SINGLE BOOKING
+# -------------------------------------------------
 
 def create_booking(user_id, show_id, seat_id, total_amount):
 
@@ -379,7 +326,7 @@ def create_booking(user_id, show_id, seat_id, total_amount):
         conn.rollback()
 
         console.print(
-            f"[bold red]Booking Error:[/bold red] {e}"
+            f"[bold red]Booking Error: {e}[/bold red]"
         )
 
         return None
@@ -388,8 +335,86 @@ def create_booking(user_id, show_id, seat_id, total_amount):
         cursor.close()
 
 
-# VIEW BOOKING
+# -------------------------------------------------
+# CREATE MULTIPLE BOOKINGS
+# -------------------------------------------------
 
+def create_multiple_bookings(
+    user_id,
+    show_id,
+    selected_seats
+):
+
+    cursor = conn.cursor()
+    booking_ids = []
+
+    try:
+
+        for seat_id, price in selected_seats:
+
+            # Final availability check
+            cursor.execute("""
+                SELECT booking_id
+                FROM bookings
+                WHERE show_id = %s
+                AND seat_id = %s
+                FOR UPDATE
+            """, (show_id, seat_id))
+
+            if cursor.fetchone():
+
+                raise Exception(
+                    f"Seat ID {seat_id} was just booked "
+                    f"by another user."
+                )
+
+            booking = Booking(
+                user_id=user_id,
+                show_id=show_id,
+                seat_id=seat_id,
+                total_amount=price
+            )
+
+            cursor.execute("""
+                INSERT INTO bookings(
+                    user_id,
+                    show_id,
+                    seat_id,
+                    total_amount
+                )
+                VALUES(%s, %s, %s, %s)
+            """, (
+                booking.user_id,
+                booking.show_id,
+                booking.seat_id,
+                booking.total_amount
+            ))
+
+            booking_ids.append(
+                cursor.lastrowid
+            )
+
+        conn.commit()
+
+        return booking_ids
+
+    except Exception as e:
+
+        conn.rollback()
+
+        console.print(
+            f"[bold red]Booking Error: {e}[/bold red]"
+        )
+
+        return []
+
+    finally:
+        cursor.close()
+
+
+# -------------------------------------------------
+# VIEW USER BOOKINGS
+# -------------------------------------------------
 
 def view_booking(user_id):
 
@@ -402,6 +427,7 @@ def view_booking(user_id):
                 b.booking_id,
                 m.movie_name,
                 t.theater_name,
+                t.location,
                 s.show_date,
                 s.show_time,
                 se.seat_number,
@@ -431,7 +457,8 @@ def view_booking(user_id):
 
         if not bookings:
             console.print(
-                "\n[bold red]No bookings found.[/bold red]\n"
+                "\n[bold yellow]No bookings found "
+                "for this user.[/bold yellow]\n"
             )
             return
 
@@ -443,11 +470,12 @@ def view_booking(user_id):
         table.add_column("Booking ID", style="cyan")
         table.add_column("Movie", style="green")
         table.add_column("Theater", style="yellow")
-        table.add_column("Date", style="magenta")
-        table.add_column("Time", style="blue")
-        table.add_column("Seat", style="cyan")
-        table.add_column("Type", style="green")
-        table.add_column("Booking Date", style="yellow")
+        table.add_column("Location", style="magenta")
+        table.add_column("Date", style="blue")
+        table.add_column("Time", style="cyan")
+        table.add_column("Seat", style="green")
+        table.add_column("Type", style="yellow")
+        table.add_column("Booking Date", style="blue")
         table.add_column("Amount", style="magenta")
 
         for booking in bookings:
@@ -456,19 +484,21 @@ def view_booking(user_id):
                 str(booking[0]),
                 booking[1],
                 booking[2],
-                str(booking[3]),
+                booking[3],
                 str(booking[4]),
-                booking[5],
+                str(booking[5]),
                 booking[6],
-                str(booking[7]),
-                f"₹{booking[8]}"
+                booking[7],
+                str(booking[8]),
+                f"₹{booking[9]}"
             )
 
         console.print(table)
 
     except Exception as e:
+
         console.print(
-            f"[bold red]Error:[/bold red] {e}"
+            f"[bold red]Error viewing bookings: {e}[/bold red]"
         )
 
     finally:
