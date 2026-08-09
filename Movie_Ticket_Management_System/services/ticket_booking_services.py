@@ -6,7 +6,12 @@ from rich.table import Table
 console = Console()
 
 
+<<<<<<< HEAD
+=======
+# -------------------------------------------------
+>>>>>>> ticket-booking
 # GET MOVIES
+# -------------------------------------------------
 
 def get_movies():
 
@@ -52,10 +57,15 @@ def get_movies():
         cursor.close()
 
 
+<<<<<<< HEAD
 # -------------------------------------------------
 # GET AVAILABLE SHOWS
 # Theater + Location + Date + Show Time
 # -------------------------------------------------
+=======
+# GET AVAILABLE SHOWS
+# Theater + Location + Date + Show Time
+>>>>>>> ticket-booking
 
 def get_available_shows(movie_id):
 

@@ -78,7 +78,11 @@ def generate_ticket_menu():
 def display_ticket(ticket):
 
     table = Table(
+<<<<<<< HEAD
         title=" MOVIE TICKET",
+=======
+        title="🎬 MOVIE TICKET",
+>>>>>>> ticket-booking
         show_header=False,
         border_style="cyan"
     )
