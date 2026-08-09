@@ -1,274 +1,417 @@
-class SeatService:
-
-    def __init__(self, connection):
-
-        self.connection = connection
+from db import conn, cursor
 
 
-    # ==========================================
-    # ADD SEAT
-    # ==========================================
+console = Console()
 
-    def add_seat(self, seat):
 
-        cursor = self.connection.cursor()
+# =========================================================
+# 1. ADD SEATS
+# =========================================================
 
-        # Check whether seat already exists
-        check_query = """
-        SELECT seat_id
-        FROM seats
-        WHERE theater_id = %s
-        AND seat_number = %s
-        """
+def add_seat():
 
-        cursor.execute(
-            check_query,
-            (
-                seat.theater_id,
-                seat.seat_number
-            )
+    try:
+        console.print(
+            "\n[bold cyan]===== Add Seat =====[/bold cyan]"
         )
 
-        existing_seat = cursor.fetchone()
+        theater_id = int(
+            input("Enter Theater ID : ").strip()
+        )
 
-        if existing_seat:
+        # Check theater exists
+        cursor.execute(
+            """
+            SELECT theater_id, theater_name, location
+            FROM theaters
+            WHERE theater_id = %s
+            """,
+            (theater_id,)
+        )
 
-            print(
-                "\nSeat "
-                + seat.seat_number
-                + " already exists."
+        theater = cursor.fetchone()
+
+        if not theater:
+            console.print(
+                "[red]Theater not found![/red]"
             )
-
-            cursor.close()
-
             return
 
-
-        query = """
-        INSERT INTO seats
-        (
-            theater_id,
-            seat_number,
-            seat_type,
-            seat_price
-        )
-        VALUES (%s, %s, %s, %s)
-        """
-
-        values = (
-            seat.theater_id,
-            seat.seat_number,
-            seat.seat_type,
-            seat.seat_price
+        console.print(
+            f"\n[green]Theater : {theater[1]}[/green]"
         )
 
-        cursor.execute(query, values)
+        console.print(
+            f"[green]Location: {theater[2]}[/green]"
+        )
 
-        self.connection.commit()
+        # Seat number
+        seat_number = input(
+            "Seat Number : "
+        ).strip().upper()
 
-        cursor.close()
+        if not seat_number:
+            console.print(
+                "[red]Seat number cannot be empty![/red]"
+            )
+            return
 
-        print("\nSeat added successfully.")
+        if len(seat_number) > 5:
+            console.print(
+                "[red]Seat number must not exceed 5 characters![/red]"
+            )
+            return
 
+        # Seat type
+        seat_type = input(
+            "Seat Type (Premium/Gold/Silver) : "
+        ).strip().title()
 
-    # ==========================================
-    # VIEW SEAT LAYOUT
-    # ==========================================
+        if not seat_type:
+            console.print(
+                "[red]Seat type cannot be empty![/red]"
+            )
+            return
 
-    def view_seats(self, theater_id):
+        if len(seat_type) > 20:
+            console.print(
+                "[red]Seat type must not exceed 20 characters![/red]"
+            )
+            return
 
-        cursor = self.connection.cursor()
+        # Seat price
+        seat_price = float(
+            input("Seat Price : ").strip()
+        )
 
-        query = """
-        SELECT
-            seat_id,
-            seat_number,
-            seat_type,
-            seat_price
-        FROM seats
-        WHERE theater_id = %s
-        ORDER BY CAST(seat_number AS UNSIGNED)
-        """
+        if seat_price < 0:
+            console.print(
+                "[red]Seat price cannot be negative![/red]"
+            )
+            return
 
+        # Check duplicate seat
         cursor.execute(
-            query,
+            """
+            SELECT seat_id
+            FROM seats
+            WHERE theater_id = %s
+            AND seat_number = %s
+            """,
+            (
+                theater_id,
+                seat_number
+            )
+        )
+
+        if cursor.fetchone():
+            console.print(
+                "[red]This seat already exists in this theater![/red]"
+            )
+            return
+
+        # Insert seat
+        cursor.execute(
+            """
+            INSERT INTO seats
+            (
+                theater_id,
+                seat_number,
+                seat_type,
+                seat_price
+            )
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                theater_id,
+                seat_number,
+                seat_type,
+                seat_price
+            )
+        )
+
+        conn.commit()
+
+        console.print(
+            "\n[green]Seat Added Successfully![/green]"
+        )
+
+    except ValueError:
+
+        console.print(
+            "[red]Please enter valid values.[/red]"
+        )
+
+    except mysql.connector.Error as e:
+
+        console.print(
+            f"[red]Database Error: {e}[/red]"
+        )
+
+    except Exception as e:
+
+        console.print(
+            f"[red]Error: {e}[/red]"
+        )
+
+
+# =========================================================
+# 2. VIEW SEAT LAYOUT
+# =========================================================
+
+def view_seats():
+
+    try:
+        console.print(
+            "\n[bold cyan]===== View Seat Layout =====[/bold cyan]"
+        )
+
+        show_id = int(
+            input("Enter Show ID : ").strip()
+        )
+
+        theater_id = int(
+            input("Enter Theater ID : ").strip()
+        )
+
+        # Check theater
+        cursor.execute(
+            """
+            SELECT theater_id, theater_name, location
+            FROM theaters
+            WHERE theater_id = %s
+            """,
             (theater_id,)
+        )
+
+        theater = cursor.fetchone()
+
+        if not theater:
+            console.print(
+                "[red]Theater not found![/red]"
+            )
+            return
+
+        console.print(
+            f"\n[bold yellow]{theater[1]}[/bold yellow]"
+        )
+
+        console.print(
+            f"[dim]{theater[2]}[/dim]"
+        )
+
+        # Get seats and booking status
+        cursor.execute(
+            """
+            SELECT
+                s.seat_id,
+                s.seat_number,
+                s.seat_type,
+                s.seat_price,
+
+                CASE
+                    WHEN b.seat_id IS NULL
+                    THEN 'Available'
+                    ELSE 'Booked'
+                END AS status
+
+            FROM seats s
+
+            LEFT JOIN bookings b
+                ON s.seat_id = b.seat_id
+                AND b.show_id = %s
+
+            WHERE s.theater_id = %s
+
+            ORDER BY s.seat_id
+            """,
+            (
+                show_id,
+                theater_id
+            )
         )
 
         seats = cursor.fetchall()
 
-        cursor.close()
-
-
         if not seats:
 
-            print(
-                "\nNo seats found for Theater ID "
-                + str(theater_id)
+            console.print(
+                "\n[yellow]No seats found for this theater.[/yellow]"
             )
 
             return
 
+        # =================================================
+        # MATRIX DISPLAY
+        # =================================================
 
-        print("\n")
-        print(
-            "                         🎬 SCREEN"
+        console.print(
+            "\n[bold white]                 SCREEN[/bold white]"
         )
 
-        print("=" * 75)
-
-        print(
-            "                         SEAT LAYOUT"
+        console.print(
+            "[dim]------------------------------------------------[/dim]"
         )
 
-        print("=" * 75)
-
+        console.print(
+            "\n[bold cyan]                 SEAT LAYOUT[/bold cyan]\n"
+        )
 
         # 5 seats in each row
-        seats_per_row = 5
+        for i in range(0, len(seats), 5):
 
+            row = seats[i:i + 5]
 
-        for i in range(
-            0,
-            len(seats),
-            seats_per_row
-        ):
-
-            row_seats = seats[
-                i:i + seats_per_row
-            ]
-
-
-            # --------------------------
-            # Top border
-            # --------------------------
-
-            print("     ", end="")
-
-            for seat in row_seats:
-
-                print(
-                    "┌──────────┐",
-                    end=" "
-                )
-
-            print()
-
-
-            # --------------------------
-            # Seat number
-            # --------------------------
-
-            print("     ", end="")
-
-            for seat in row_seats:
+            for seat in row:
 
                 seat_number = seat[1]
+                status = seat[4]
 
-                print(
-                    f"│ {seat_number:^8} │",
-                    end=" "
-                )
+                if status == "Available":
 
-            print()
+                    console.print(
+                        f"[black on green]  {seat_number:^5}  [/black on green]",
+                        end=" "
+                    )
 
+                else:
 
-            # --------------------------
-            # Seat type
-            # --------------------------
+                    console.print(
+                        f"[white on red]  {seat_number:^5}  [/white on red]",
+                        end=" "
+                    )
 
-            print("     ", end="")
+            console.print()
 
-            for seat in row_seats:
-
-                seat_type = seat[2]
-
-                print(
-                    f"│ {seat_type:^8} │",
-                    end=" "
-                )
-
-            print()
-
-
-            # --------------------------
-            # Seat price
-            # --------------------------
-
-            print("     ", end="")
-
-            for seat in row_seats:
-
-                price = seat[3]
-
-                print(
-                    f"│ ₹{price:<7.2f} │",
-                    end=" "
-                )
-
-            print()
-
-
-            # --------------------------
-            # Bottom border
-            # --------------------------
-
-            print("     ", end="")
-
-            for seat in row_seats:
-
-                print(
-                    "└──────────┘",
-                    end=" "
-                )
-
-            print()
-
-            print()
-
-
-        print("=" * 75)
-
-        print(
-            "Normal  → ₹150"
+        console.print(
+            "\n[green]■ Available[/green]    "
+            "[red]■ Booked[/red]"
         )
 
-        print(
-            "Premium → ₹250"
+        # =================================================
+        # SEAT DETAILS
+        # =================================================
+
+        console.print(
+            "\n[bold cyan]===== Seat Details =====[/bold cyan]"
         )
 
-        print(
-            "Golden  → ₹350"
+        table = Table()
+
+        table.add_column(
+            "Seat ID",
+            justify="center"
         )
 
-        print("=" * 75)
+        table.add_column(
+            "Seat",
+            justify="center"
+        )
+
+        table.add_column(
+            "Type",
+            justify="center"
+        )
+
+        table.add_column(
+            "Price",
+            justify="center"
+        )
+
+        table.add_column(
+            "Status",
+            justify="center"
+        )
+
+        for seat in seats:
+
+            if seat[4] == "Available":
+
+                status_text = "[green]Available[/green]"
+
+            else:
+
+                status_text = "[red]Booked[/red]"
+
+            table.add_row(
+                str(seat[0]),
+                seat[1],
+                seat[2],
+                f"₹{seat[3]:.2f}",
+                status_text
+            )
+
+        console.print(table)
+
+    except ValueError:
+
+        console.print(
+            "[red]Show ID and Theater ID must be numbers.[/red]"
+        )
+
+    except mysql.connector.Error as e:
+
+        console.print(
+            f"[red]Database Error: {e}[/red]"
+        )
+
+    except Exception as e:
+
+        console.print(
+            f"[red]Error: {e}[/red]"
+        )
 
 
-    # ==========================================
-    # CHECK SEAT AVAILABILITY
-    # ==========================================
+# =========================================================
+# 3. CHECK SEAT AVAILABILITY
+# =========================================================
 
-    def check_seat_availability(
-        self,
-        theater_id,
-        seat_number
-    ):
+def check_seat_availability():
 
-        cursor = self.connection.cursor()
+    try:
 
-        query = """
-        SELECT
-            seat_id,
-            seat_type,
-            seat_price
-        FROM seats
-        WHERE theater_id = %s
-        AND seat_number = %s
-        """
+        console.print(
+            "\n[bold cyan]===== Check Seat Availability =====[/bold cyan]"
+        )
 
+        show_id = int(
+            input("Enter Show ID : ").strip()
+        )
+
+        theater_id = int(
+            input("Enter Theater ID : ").strip()
+        )
+
+        seat_number = input(
+            "Enter Seat Number : "
+        ).strip().upper()
+
+        # Check seat and booking status
         cursor.execute(
-            query,
+            """
+            SELECT
+                s.seat_id,
+                s.seat_number,
+                s.seat_type,
+                s.seat_price,
+
+                CASE
+                    WHEN b.seat_id IS NULL
+                    THEN 'Available'
+                    ELSE 'Booked'
+                END AS status
+
+            FROM seats s
+
+            LEFT JOIN bookings b
+                ON s.seat_id = b.seat_id
+                AND b.show_id = %s
+
+            WHERE s.theater_id = %s
+            AND s.seat_number = %s
+            """,
             (
+                show_id,
                 theater_id,
                 seat_number
             )
@@ -276,119 +419,294 @@ class SeatService:
 
         seat = cursor.fetchone()
 
-        cursor.close()
+        if not seat:
 
-
-        if seat:
-
-            print("\nSeat found.")
-
-            print(
-                "Seat ID    :",
-                seat[0]
+            console.print(
+                "\n[red]Seat Not Found![/red]"
             )
 
-            print(
-                "Seat Type  :",
-                seat[1]
-            )
+            return
 
-            print(
-                "Seat Price : ₹",
-                seat[2]
+        console.print(
+            "\n[bold cyan]----- Seat Details -----[/bold cyan]"
+        )
+
+        console.print(
+            f"Seat ID     : {seat[0]}"
+        )
+
+        console.print(
+            f"Seat Number : {seat[1]}"
+        )
+
+        console.print(
+            f"Seat Type   : {seat[2]}"
+        )
+
+        console.print(
+            f"Seat Price  : ₹{seat[3]:.2f}"
+        )
+
+        if seat[4] == "Available":
+
+            console.print(
+                "Status      : [green]AVAILABLE[/green]"
             )
 
         else:
 
-            print(
-                "\nSeat "
-                + seat_number
-                + " not found."
+            console.print(
+                "Status      : [red]BOOKED[/red]"
             )
 
+    except ValueError:
 
-    # ==========================================
-    # UPDATE SEAT
-    # ==========================================
+        console.print(
+            "[red]Show ID and Theater ID must be numbers.[/red]"
+        )
 
-    def update_seat_type(
-        self,
-        seat_id,
-        seat_type,
-        seat_price
-    ):
+    except mysql.connector.Error as e:
 
-        cursor = self.connection.cursor()
+        console.print(
+            f"[red]Database Error: {e}[/red]"
+        )
 
-        query = """
-        UPDATE seats
-        SET
-            seat_type = %s,
-            seat_price = %s
-        WHERE seat_id = %s
-        """
+    except Exception as e:
 
+        console.print(
+            f"[red]Error: {e}[/red]"
+        )
+
+
+# =========================================================
+# 4. UPDATE SEAT TYPE
+# =========================================================
+
+def update_seat():
+
+    try:
+
+        console.print(
+            "\n[bold cyan]===== Update Seat Type =====[/bold cyan]"
+        )
+
+        seat_id = int(
+            input("Seat ID : ").strip()
+        )
+
+        # Find seat
         cursor.execute(
-            query,
-            (
+            """
+            SELECT
+                seat_id,
+                theater_id,
+                seat_number,
                 seat_type,
-                seat_price,
+                seat_price
+            FROM seats
+            WHERE seat_id = %s
+            """,
+            (seat_id,)
+        )
+
+        seat = cursor.fetchone()
+
+        if not seat:
+
+            console.print(
+                "[red]Seat Not Found![/red]"
+            )
+
+            return
+
+        console.print(
+            "\n[bold yellow]Current Seat Details[/bold yellow]"
+        )
+
+        console.print(
+            f"Seat ID     : {seat[0]}"
+        )
+
+        console.print(
+            f"Theater ID  : {seat[1]}"
+        )
+
+        console.print(
+            f"Seat Number : {seat[2]}"
+        )
+
+        console.print(
+            f"Seat Type   : {seat[3]}"
+        )
+
+        console.print(
+            f"Seat Price  : ₹{seat[4]:.2f}"
+        )
+
+        # New seat type
+        new_seat_type = input(
+            "\nNew Seat Type : "
+        ).strip().title()
+
+        if not new_seat_type:
+
+            console.print(
+                "[red]Seat type cannot be empty![/red]"
+            )
+
+            return
+
+        if len(new_seat_type) > 20:
+
+            console.print(
+                "[red]Seat type must not exceed 20 characters![/red]"
+            )
+
+            return
+
+        # Update ONLY seat type
+        cursor.execute(
+            """
+            UPDATE seats
+            SET seat_type = %s
+            WHERE seat_id = %s
+            """,
+            (
+                new_seat_type,
                 seat_id
             )
         )
 
-        self.connection.commit()
+        conn.commit()
+
+        console.print(
+            "\n[green]Seat Type Updated Successfully![/green]"
+        )
+
+    except ValueError:
+
+        console.print(
+            "[red]Seat ID must be a number.[/red]"
+        )
+
+    except mysql.connector.Error as e:
+
+        console.print(
+            f"[red]Database Error: {e}[/red]"
+        )
+
+    except Exception as e:
+
+        console.print(
+            f"[red]Error: {e}[/red]"
+        )
 
 
-        if cursor.rowcount > 0:
+# =========================================================
+# 5. DELETE SEAT
+# =========================================================
 
-            print(
-                "\nSeat updated successfully."
-            )
+def delete_seat():
 
-        else:
+    try:
 
-            print(
-                "\nSeat ID not found."
-            )
+        console.print(
+            "\n[bold cyan]===== Delete Seat =====[/bold cyan]"
+        )
 
+        seat_id = int(
+            input("Seat ID : ").strip()
+        )
 
-        cursor.close()
-
-
-    # ==========================================
-    # DELETE SEAT
-    # ==========================================
-
-    def delete_seat(self, seat_id):
-
-        cursor = self.connection.cursor()
-
-        query = """
-        DELETE FROM seats
-        WHERE seat_id = %s
-        """
-
+        # Find seat
         cursor.execute(
-            query,
+            """
+            SELECT
+                seat_id,
+                theater_id,
+                seat_number,
+                seat_type,
+                seat_price
+            FROM seats
+            WHERE seat_id = %s
+            """,
             (seat_id,)
         )
 
-        self.connection.commit()
+        seat = cursor.fetchone()
 
+        if not seat:
 
-        if cursor.rowcount > 0:
-
-            print(
-                "\nSeat deleted successfully."
+            console.print(
+                "[red]Seat Not Found![/red]"
             )
 
-        else:
+            return
 
-            print(
-                "\nSeat ID not found."
+        console.print(
+            "\n[bold yellow]Seat Details[/bold yellow]"
+        )
+
+        console.print(
+            f"Seat ID     : {seat[0]}"
+        )
+
+        console.print(
+            f"Theater ID  : {seat[1]}"
+        )
+
+        console.print(
+            f"Seat Number : {seat[2]}"
+        )
+
+        console.print(
+            f"Seat Type   : {seat[3]}"
+        )
+
+        console.print(
+            f"Seat Price  : ₹{seat[4]:.2f}"
+        )
+
+        confirm = input(
+            "\nDelete this seat? (yes/no): "
+        ).strip().lower()
+
+        if confirm != "yes":
+
+            console.print(
+                "[yellow]Delete Cancelled.[/yellow]"
             )
 
+            return
 
-        cursor.close()
+        cursor.execute(
+            """
+            DELETE FROM seats
+            WHERE seat_id = %s
+            """,
+            (seat_id,)
+        )
 
+        conn.commit()
+
+        console.print(
+            "\n[green]Seat Deleted Successfully![/green]"
+        )
+
+    except ValueError:
+
+        console.print(
+            "[red]Seat ID must be a number.[/red]"
+        )
+
+    except mysql.connector.Error as e:
+
+        console.print(
+            f"[red]Database Error: {e}[/red]"
+        )
+
+    except Exception as e:
+
+        console.print(
+            f"[red]Error: {e}[/red]"
+        )
