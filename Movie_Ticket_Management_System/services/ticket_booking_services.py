@@ -54,10 +54,8 @@ def get_movies():
         cursor.close()
 
 
-# -------------------------------------------------
 # GET AVAILABLE SHOWS
 # Theater + Location + Date + Show Time
-# -------------------------------------------------
 
 def get_available_shows(movie_id):
 
@@ -505,4 +503,3 @@ def view_booking(user_id):
 
     finally:
         cursor.close()
-

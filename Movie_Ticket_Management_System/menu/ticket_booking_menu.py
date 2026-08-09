@@ -13,7 +13,6 @@ from services.ticket_booking_services import (
 
 console = Console()
 
-
 # -------------------------------------------------
 # BOOK TICKET
 # -------------------------------------------------
@@ -22,9 +21,7 @@ def book_ticket(user_id):
 
     try:
         console.print(
-            Panel.fit(
-                "[bold cyan]BOOK TICKET[/bold cyan]"
-            )
+            Panel.fit("[bold cyan]BOOK TICKET[/bold cyan]")
         )
 
         # STEP 1 - MOVIE
@@ -45,7 +42,7 @@ def book_ticket(user_id):
 
         movie_id = int(movie_id)
 
-        # STEP 2 - THEATER + DATE + SHOW + TIME
+        # STEP 2 - SHOW
         shows = get_available_shows(movie_id)
 
         if not shows:
@@ -63,9 +60,8 @@ def book_ticket(user_id):
 
         show_id = int(show_id)
 
-        # Check whether selected show exists
+        # Validate show
         selected_show = None
-
         for show in shows:
             if show[0] == show_id:
                 selected_show = show
@@ -83,7 +79,10 @@ def book_ticket(user_id):
         if not seats:
             return
 
-        # STEP 4 - MULTIPLE SEATS
+        # ✅ FIX: extract valid seat IDs
+        valid_seat_ids = [seat[0] for seat in seats]
+
+        # STEP 4 - INPUT
         seat_input = console.input(
             "\n[yellow]Enter Seat IDs (example: 1,2,3): [/yellow]"
         ).strip()
@@ -105,15 +104,23 @@ def book_ticket(user_id):
             )
             return
 
-        # Remove duplicate seat IDs
+        # Remove duplicates
         seat_ids = list(dict.fromkeys(seat_ids))
 
-        # STEP 5 - CHECK ALL SEATS
+        # STEP 5 - CHECK SEATS
         selected_seats = []
         total_amount = 0
 
         for seat_id in seat_ids:
 
+            # ✅ FIX: check from displayed seats
+            if seat_id not in valid_seat_ids:
+                console.print(
+                    f"[bold red]Invalid Seat ID: {seat_id}[/bold red]"
+                )
+                return
+
+            # existing function (no change)
             available = check_seat_availability(
                 show_id,
                 seat_id
@@ -127,12 +134,6 @@ def book_ticket(user_id):
 
             price = get_seat_price(seat_id)
 
-            if price is None:
-                console.print(
-                    f"[bold red]Invalid Seat ID: {seat_id}[/bold red]"
-                )
-                return
-
             selected_seats.append(
                 (seat_id, price)
             )
@@ -141,13 +142,11 @@ def book_ticket(user_id):
 
         # STEP 6 - TOTAL
         console.print(
-            f"\n[bold cyan]Number of Seats : "
-            f"{len(selected_seats)}[/bold cyan]"
+            f"\n[bold cyan]Number of Seats : {len(selected_seats)}[/bold cyan]"
         )
 
         console.print(
-            f"[bold cyan]Total Amount : "
-            f"₹{total_amount:.2f}[/bold cyan]"
+            f"[bold cyan]Total Amount : ₹{total_amount:.2f}[/bold cyan]"
         )
 
         # STEP 7 - CONFIRM
@@ -161,7 +160,7 @@ def book_ticket(user_id):
             )
             return
 
-        # STEP 8 - SAVE ALL BOOKINGS
+        # STEP 8 - SAVE
         booking_ids = create_multiple_bookings(
             user_id,
             show_id,
@@ -170,14 +169,11 @@ def book_ticket(user_id):
 
         if booking_ids:
             console.print(
-                "\n[bold green]"
-                "✓ All selected seats booked successfully!"
-                "[/bold green]"
+                "\n[bold green]✓ All selected seats booked successfully![/bold green]"
             )
 
             console.print(
-                f"[bold cyan]Booking IDs : "
-                f"{', '.join(map(str, booking_ids))}[/bold cyan]\n"
+                f"[bold cyan]Booking IDs : {', '.join(map(str, booking_ids))}[/bold cyan]\n"
             )
 
     except Exception as e:
@@ -191,7 +187,6 @@ def book_ticket(user_id):
 # -------------------------------------------------
 
 def seat_availability():
-
     # This functionality will be added by the collaborator.
     pass
 
@@ -204,12 +199,9 @@ def booking_details(user_id):
 
     try:
         console.print(
-            Panel.fit(
-                "[bold cyan]MY BOOKINGS[/bold cyan]"
-            )
+            Panel.fit("[bold cyan]MY BOOKINGS[/bold cyan]")
         )
 
-        # Only this user's bookings are displayed
         view_booking(user_id)
 
     except Exception as e:
@@ -228,9 +220,7 @@ def ticket_booking_menu(user_id):
 
         try:
             console.print(
-                Panel.fit(
-                    "[bold cyan]TICKET BOOKING MENU[/bold cyan]"
-                )
+                Panel.fit("[bold cyan]TICKET BOOKING MENU[/bold cyan]")
             )
 
             console.print("1. Book Ticket")
@@ -256,8 +246,7 @@ def ticket_booking_menu(user_id):
 
             else:
                 console.print(
-                    "[bold red]Invalid Choice! "
-                    "Please select 1-4.[/bold red]"
+                    "[bold red]Invalid Choice! Please select 1-4.[/bold red]"
                 )
 
         except KeyboardInterrupt:

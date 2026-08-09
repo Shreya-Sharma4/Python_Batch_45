@@ -5,10 +5,10 @@ from menu.ticket_generation_menu import ticket_generation_menu
 
 # ------------------ CALLING FUNCTIONS ------------------
 
-# user_id = 1
+user_id = 1
 
 # theater_menu()
 
-# ticket_booking_menu(user_id)
+ticket_booking_menu(user_id)
 
-ticket_generation_menu()
+# ticket_generation_menu()
