@@ -5,8 +5,7 @@ from services.user_services import (
     login_user,
     view_profile,
     update_profile,
-    change_password,
-    delete_account
+    change_password
 )
 
 
@@ -30,8 +29,7 @@ def user_dashboard(user_id):
             console.print("1. View Profile")
             console.print("2. Update Profile")
             console.print("3. Change Password")
-            console.print("4. Delete Account")
-            console.print("5. Logout")
+            console.print("4. Logout")
 
             choice = input("\nEnter your choice : ")
 
@@ -48,14 +46,6 @@ def user_dashboard(user_id):
                 change_password(user_id)
 
             elif choice == "4":
-
-                deleted = delete_account(user_id)
-
-                if deleted:
-
-                    break
-
-            elif choice == "5":
 
                 console.print(
                     "\n[green]Logged out successfully![/green]"
@@ -144,6 +134,10 @@ def menu():
                 f"\n[red]Error: {e}[/red]"
             )
 
+
+# =========================================================
+# MAIN
+# =========================================================
 
 if __name__ == "__main__":
     menu()
