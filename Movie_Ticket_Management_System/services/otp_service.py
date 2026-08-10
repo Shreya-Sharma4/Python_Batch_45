@@ -10,7 +10,6 @@ EMAIL = os.getenv("EMAIL")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 class VerifyOtp:
-        
     def __init__(self):
         self.__otp=None
         self.__attempts=0
@@ -19,7 +18,6 @@ class VerifyOtp:
         if self.__attempts<3:
             return self.check_login(receiver,update_function,*args)
 
-    
     def check_login(self,receiver,update_function,*args):
         self.__otp=r.randint(1000,9999)
         msg = EmailMessage()
@@ -31,21 +29,15 @@ class VerifyOtp:
         try:
             server = smtplib.SMTP("smtp.gmail.com", 587)
             server.starttls()
-            server.login(
-            EMAIL,
-            EMAIL_PASSWORD
-            )
+            server.login(EMAIL, EMAIL_PASSWORD)
             server.send_message(msg)
             self.sendtime=time.time()
-        
         except Exception as e:
             print(e)
             return
-        
         finally:
             if server is not None:
                 server.quit()
-        
         try:    
             print("your otp is send on your mail")
             userotp=int(input("reenter your otp to validate : "))
